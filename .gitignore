@@ -1,0 +1,26 @@
+# Dependencies and build output
+frontend/node_modules/
+frontend/.next/
+frontend/.data/
+
+# Local environment and secrets
+frontend/.env.local
+backend/.env
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Runtime recordings and local artifacts
+frontend/public/recordings/
+frontend/public/demo-recordings/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Other repositories opened in the workspace
+CallLens-repo/
+Stafe-CRM-repo/
+call-center-repo/
