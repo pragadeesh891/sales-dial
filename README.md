@@ -4,11 +4,24 @@ Modern, AI-powered Sales Dial & Call Center Management Platform built with Next.
 
 ---
 
-## ? Quick Start: 3 Ways to Run
+## ? Quick Start: Ways to Run
 
 ---
 
-### Option 1: ?? 1-Command Docker Run (Frontend + Backend + Database)
+### Option 1: ?? 1-Click Deploy to Netlify
+Deploy the full platform live on the internet with Netlify:
+
+1. Go to [app.netlify.com](https://app.netlify.com) and click **"Add new site"** -> **"Import an existing project"**.
+2. Select **GitHub** and pick `pragadeesh891/sales-dial`.
+3. Netlify will automatically detect the pre-configured [`netlify.toml`](./netlify.toml) settings:
+   - **Base directory**: `frontend`
+   - **Build command**: `npm run build`
+   - **Publish directory**: `.next`
+4. Click **Deploy Site** — your app will be live with a free 24/7 HTTPS domain (e.g. `https://sales-dial.netlify.app`)!
+
+---
+
+### Option 2: ?? 1-Command Docker Run (Frontend + Backend + Database)
 Runs **everything** (Next.js Frontend, Go API Backend, PostgreSQL, Redis, RabbitMQ, and MinIO) in isolated Docker containers:
 
 ```bash
@@ -21,7 +34,7 @@ docker compose up --build
 
 ---
 
-### Option 2: ? Frontend Standalone (Zero Configuration Needed)
+### Option 3: ? Local Frontend (Zero Setup / Instant Run)
 Runs the Next.js web application with the built-in CRM database, live dialer, AI tools, and audio playback:
 
 ```bash
@@ -36,7 +49,7 @@ npm run dev
 
 ---
 
-### Option 3: ??? Native Full-Stack (Go + Docker Services + Next.js)
+### Option 4: ??? Native Full-Stack (Go + Docker Services + Next.js)
 
 #### 1. Start Support Infrastructure:
 ```bash
@@ -91,11 +104,4 @@ The platform includes pre-configured demo and admin accounts:
 | **Leaderboard** | [`/leaderboard`](http://localhost:3000/leaderboard) | Agent sales rankings & achievement badges |
 | **Reports** | [`/reports`](http://localhost:3000/reports) | Daily analytics, conversion rates & export options |
 | **Settings** | [`/settings`](http://localhost:3000/settings) | Account, system preferences & integrations |
-
----
-
-## ?? Network Sharing (Access from another phone/laptop)
-
-1. Find your machine IP address (`192.168.0.4` or run `ipconfig`).
-2. Have your teammate open: `http://192.168.0.4:3000`
 
