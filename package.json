@@ -1,0 +1,12 @@
+{
+  "name": "sales-dial",
+  "version": "1.0.0",
+  "description": "Sales Dial & Call Center CRM Platform",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend run start",
+    "install:all": "npm --prefix frontend install"
+  }
+}
+
