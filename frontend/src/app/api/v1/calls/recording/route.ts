@@ -13,22 +13,29 @@ export async function POST(request: Request) {
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
-    const recordingsDirectory = path.join(process.cwd(), "public", "recordings");
-    await mkdir(recordingsDirectory, { recursive: true });
-
     const extension = file.type.includes("mp4") ? "mp4" : "webm";
     const filename = `${callId}-${Date.now()}.${extension}`;
-    await writeFile(path.join(recordingsDirectory, filename), bytes);
+    let recordingUrl = `/recordings/${filename}`;
+
+    try {
+      const recordingsDirectory = path.join(process.cwd(), "public", "recordings");
+      await mkdir(recordingsDirectory, { recursive: true });
+      await writeFile(path.join(recordingsDirectory, filename), bytes);
+    } catch {
+      // In serverless environments (Netlify / Vercel), fallback to data URI if disk is read-only
+      recordingUrl = `data:${file.type || "audio/webm"};base64,${bytes.toString("base64")}`;
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        recordingUrl: `/recordings/${filename}`,
+        recordingUrl,
         bytes: bytes.length,
         contentType: file.type || "audio/webm"
       }
     });
-  } catch {
-    return NextResponse.json({ success: false, error: "Failed to store call recording" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error?.message || "Failed to store call recording" }, { status: 500 });
   }
 }
+
