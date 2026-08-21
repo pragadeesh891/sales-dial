@@ -4,8 +4,12 @@
   "description": "Sales Dial & Call Center CRM Platform",
   "scripts": {
     "dev": "npm --prefix frontend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "cd backend && go run ./cmd/api",
+    "dev:worker": "cd backend && go run ./cmd/worker",
+    "infra:up": "docker compose -f backend/infra/docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f backend/infra/docker-compose.dev.yml down",
     "build": "npm --prefix frontend run build",
-    "start": "npm --prefix frontend run start",
     "install:all": "npm --prefix frontend install"
   }
 }

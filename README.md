@@ -1,75 +1,94 @@
 # Logashree Sales Dial & Call Center Platform
 
-Modern, AI-powered Sales Dial & Call Center Management Platform built with Next.js 16, React 19, TypeScript, and Tailwind CSS.
+Modern, AI-powered Sales Dial & Call Center Management Platform with Next.js 16 (React 19) frontend and high-performance Go microservice backend.
 
 ---
 
-## ? Quick Start Guide (For You & Your Teammates)
+## ?? How to Run
 
-Follow these simple steps after cloning the repository:
-
-### 1. Prerequisites
-- **Node.js**: Version 18+ (Node 20+ or 22+ recommended)
-- **npm**: Included with Node.js
+You have two ways to run the project depending on your requirements:
 
 ---
 
-### 2. Install & Run
+### Option 1: Frontend App (Quickest — Zero Setup)
+Runs the complete web application with built-in CRM database, live call dialer, AI tools, manager dashboard, and audio recordings.
 
-#### Option A (From the root folder):
 ```bash
+# 1. Install dependencies
 npm run install:all
+
+# 2. Start the application
 npm run dev
 ```
 
-#### Option B (Directly inside `frontend/`):
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Once started, open your browser to:
+Open your browser at:
 ?? **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+### Option 2: Full-Stack Mode (Go Backend + Docker + Next.js)
+Runs the native Go API backend alongside PostgreSQL, Redis, RabbitMQ, and MinIO storage.
+
+#### Step 1: Start Backend Services (Docker)
+```bash
+npm run infra:up
+```
+*(Starts Postgres at `:5432`, Redis at `:6379`, RabbitMQ at `:5672`/`:15672`, MinIO at `:9000`/`:9001`)*
+
+#### Step 2: Setup Backend Environment
+```bash
+# Windows PowerShell:
+Copy-Item backend/.env.example backend/.env
+
+# Linux / macOS / Git Bash:
+cp backend/.env.example backend/.env
+```
+
+#### Step 3: Start Go API Backend & Worker
+```bash
+npm run dev:backend
+```
+*(The Go backend automatically connects to Postgres, runs all 9 SQL migrations, connects to Redis/RabbitMQ/MinIO, and starts listening on `http://localhost:8080`)*
+
+#### Step 4: Start Frontend
+In a new terminal:
+```bash
+npm run dev:frontend
+```
 
 ---
 
 ## ?? Login Credentials
 
-The platform uses role-based authentication based on your email:
+The platform includes pre-configured accounts:
 
-| Role | Email | Password | Access |
+| Role | Email | Password | Access Area |
 | :--- | :--- | :--- | :--- |
-| **Manager / Admin** | `manager@company.com` *(or `admin@company.com`)* | Any password (e.g. `password` or `admin123`) | Manager KPIs, Team Overview, AI Chat Assistant, Queue Live |
-| **Salesperson / Agent** | `agent@company.com` *(or `sales@company.com`)* | Any password (e.g. `password` or `agent123`) | Outbound Dialer, Live Call Room, Leads CRM, AI Follow-ups |
+| **Manager / Admin** | `manager@company.com` *(or `admin@test.local`)* | `password` *(or `Admin1234!`)* | Manager KPIs, Team Overview, AI Chat Assistant, Live Queue Monitor |
+| **Salesperson / Agent** | `agent@company.com` *(or `agent@test.local`)* | `password` *(or `Admin1234!`)* | Outbound Dialer, Live Call Room, Leads CRM, AI Follow-up Generator |
 
 ---
 
-## ?? Key Features & Navigation
+## ?? Application Modules & Routes
 
-- **Outbound Dialer**: [`/dialer`](http://localhost:3000/dialer) - Quick keypad dialing and active lead dialer.
-- **Call Room**: [`/call-room`](http://localhost:3000/call-room) - Live customer context, talking points, and call dispositions.
-- **Leads CRM**: [`/leads`](http://localhost:3000/leads) - Lead management pipeline, status filters, and contact assignment.
-- **AI Center**: [`/ai-center`](http://localhost:3000/ai-center) - Automated objection handling, call insights, and AI summaries.
-- **Follow-up Generator**: [`/followup-generator`](http://localhost:3000/followup-generator) - AI-drafted email and follow-up templates.
-- **Manager Hub**: [`/manager`](http://localhost:3000/manager) - Performance dashboard, team metrics, and conversion rates.
+- **Outbound Dialer**: [`/dialer`](http://localhost:3000/dialer) - Keypad, quick customer calling, call status.
+- **Call Room**: [`/call-room`](http://localhost:3000/call-room) - Live active call screen with live notes & script.
+- **Leads CRM**: [`/leads`](http://localhost:3000/leads) - Lead pipeline, contact cards, lead assignment.
+- **AI Intelligence Center**: [`/ai-center`](http://localhost:3000/ai-center) - Objection handler & call summary engine.
+- **Follow-up Generator**: [`/followup-generator`](http://localhost:3000/followup-generator) - AI-generated email drafts.
+- **Manager Hub**: [`/manager`](http://localhost:3000/manager) - Real-time metrics, conversion analytics, agent performance.
 - **Manager AI Chat**: [`/manager-ai-chat`](http://localhost:3000/manager-ai-chat) - Conversational AI queries for manager insights.
-- **Supervisor Floor**: [`/supervisor`](http://localhost:3000/supervisor) - Live agent monitoring with Whisper and Barge controls.
-- **Calls History**: [`/calls`](http://localhost:3000/calls) - Complete call log history and recording player.
-- **Leaderboard**: [`/leaderboard`](http://localhost:3000/leaderboard) - Sales rep rankings and badges.
-- **Settings**: [`/settings`](http://localhost:3000/settings) - Profile and system preferences.
+- **Supervisor Floor**: [`/supervisor`](http://localhost:3000/supervisor) - Live agent monitoring with Whisper & Barge.
+- **Calls History**: [`/calls`](http://localhost:3000/calls) - Call audio playback, dispositions & notes.
+- **Leaderboard**: [`/leaderboard`](http://localhost:3000/leaderboard) - Rep rankings and achievement tracking.
+- **Reports**: [`/reports`](http://localhost:3000/reports) - Daily and weekly call conversion summaries.
+- **Settings**: [`/settings`](http://localhost:3000/settings) - Profile and system configurations.
 
 ---
 
-## ?? Environment Variables (Optional)
+## ?? Sharing Access with Teammates (LAN / Network)
 
-The frontend runs out of the box with built-in mock services. For custom configurations, create a `.env.local` inside `frontend/`:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
-CALLCENTER_API_BASE_URL=http://localhost:8080
-RESEND_API_KEY=
-EMAIL_FROM=Sales Team <sales@example.com>
-LEADS_DATA_FILE=.data/leads.json
-```
+To let teammates or friends on the same Wi-Fi access your running app:
+1. Find your IP address (`192.168.0.4` or run `ipconfig`).
+2. Have your friend open: `http://192.168.0.4:3000`
 
