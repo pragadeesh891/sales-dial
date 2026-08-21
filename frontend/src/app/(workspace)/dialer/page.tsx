@@ -46,6 +46,7 @@ export default function DialerPage() {
   const recordingDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const roomIdRef = useRef<string>(`room-${Date.now()}`);
   const callRecordIdRef = useRef<string | null>(null);
+  const ringtoneContextRef = useRef<AudioContext | null>(null);
 
   // AI Core 1: Live Sentiment & Objection State
   const [liveSentiment, setLiveSentiment] = useState<'positive' | 'neutral' | 'negative'>('neutral');
@@ -289,25 +290,92 @@ export default function DialerPage() {
         callRecordIdRef.current = callJson.data?.id || null;
       }
 
-      // Automatically transition to connected after ringing tone (1.5s)
+      // Play audible phone ringing tone
+      playRingtone();
+
+      // Automatically transition to connected after ringing tone (2s)
       setTimeout(() => {
+        stopRingtone();
         setWorkflowStep("Live voice call connected");
         setCallState("connected");
         setLiveSentiment("positive");
-        setLiveSentimentScore(75);
-      }, 1500);
+        setLiveSentimentScore(78);
+
+        // Play audible customer greeting through device speakers
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const greeting = new SpeechSynthesisUtterance(
+            `Hello? Yes, this is ${selectedLead?.customerName || "Customer"}. I am following up on the ${selectedLead?.product || "Enterprise Solution"} demo.`
+          );
+          greeting.rate = 1.0;
+          greeting.pitch = 0.95;
+          window.speechSynthesis.speak(greeting);
+        }
+      }, 2000);
 
     } catch (err: any) {
       console.error("Call initialization notice:", err);
-      // Fallback connected state
       setTimeout(() => {
+        stopRingtone();
         setWorkflowStep("Live call connected (Simulated mode)");
         setCallState("connected");
-      }, 1500);
+      }, 2000);
     }
   };
 
+  const playRingtone = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      ringtoneContextRef.current = ctx;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = "sine";
+      osc2.type = "sine";
+      osc1.frequency.setValueAtTime(440, ctx.currentTime);
+      osc2.frequency.setValueAtTime(480, ctx.currentTime);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start();
+      osc2.start();
+    } catch {}
+  };
+
+  const stopRingtone = () => {
+    try {
+      ringtoneContextRef.current?.close();
+      ringtoneContextRef.current = null;
+    } catch {}
+  };
+
+  const playDisconnectTone = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(420, ctx.currentTime);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => {
+        try {
+          osc.stop();
+          ctx.close();
+        } catch {}
+      }, 350);
+    } catch {}
+  };
+
   const handleEndCall = () => {
+    stopRingtone();
+    playDisconnectTone();
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     setWorkflowStep("Uploading real recording");
     setCallState("ended");
     cancelAnimationFrame(animFrameRef.current);
@@ -406,7 +474,7 @@ export default function DialerPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <audio ref={remoteAudioRef} autoPlay />
+      <audio ref={remoteAudioRef} autoPlay playsInline />
 
       <div className="bg-slate-900 text-white rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="font-bold uppercase tracking-wider text-emerald-300">End-to-end call workflow</span>

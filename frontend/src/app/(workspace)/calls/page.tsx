@@ -20,9 +20,9 @@ export default function AICallsPage() {
   const [calls, setCalls] = useState<any[]>([]);
   const [selectedCall, setSelectedCall] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentLineIndex, setCurrentLineIndex] = useState<number>(-1);
   const [playbackSecs, setPlaybackSecs] = useState(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const isPlayingRef = useRef(false);
 
   useEffect(() => {
     async function loadCalls() {
@@ -39,55 +39,6 @@ export default function AICallsPage() {
     }
     loadCalls();
   }, []);
-
-  // Audio Playback Simulation Timer & Sound Synthesizer
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setPlaybackSecs((prev) => {
-          const maxDur = selectedCall?.durationSeconds || 392;
-          if (prev >= maxDur) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, selectedCall]);
-
-  const togglePlayback = () => {
-    if (isPlaying) {
-      setIsPlaying(false);
-      try {
-        oscillatorRef.current?.stop();
-        audioContextRef.current?.close();
-      } catch {}
-    } else {
-      setIsPlaying(true);
-      try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        audioContextRef.current = ctx;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        oscillatorRef.current = osc;
-      } catch {}
-    }
-  };
-
-  const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
 
   const ai = selectedCall?.aiAnalysis || {
     transcript: [
@@ -117,7 +68,74 @@ export default function AICallsPage() {
     conversionProbability: 88
   };
 
-  const currentDuration = selectedCall?.durationSeconds || 392;
+  const transcript = ai.transcript || [];
+  const currentDuration = selectedCall?.durationSeconds || 195;
+
+  // Real voice speech synthesis playback
+  const playTranscriptAudibly = (startIndex: number = 0) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setIsPlaying(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    isPlayingRef.current = true;
+    setIsPlaying(true);
+
+    let idx = startIndex;
+    const speakNext = () => {
+      if (!isPlayingRef.current || idx >= transcript.length) {
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+        setCurrentLineIndex(-1);
+        return;
+      }
+
+      setCurrentLineIndex(idx);
+      const line = transcript[idx];
+      const utterance = new SpeechSynthesisUtterance(line.text);
+      utterance.rate = 1.0;
+      utterance.pitch = line.speaker.includes("Agent") || line.speaker.includes("Priya") ? 1.15 : 0.95;
+
+      utterance.onend = () => {
+        if (isPlayingRef.current) {
+          idx += 1;
+          setPlaybackSecs(Math.round((idx / transcript.length) * currentDuration));
+          setTimeout(speakNext, 400);
+        }
+      };
+
+      utterance.onerror = () => {
+        if (isPlayingRef.current) {
+          idx += 1;
+          setTimeout(speakNext, 400);
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakNext();
+  };
+
+  const togglePlayback = () => {
+    if (isPlaying) {
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    } else {
+      playTranscriptAudibly(currentLineIndex >= 0 ? currentLineIndex : 0);
+    }
+  };
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   const progressPercent = Math.min(100, Math.round((playbackSecs / Math.max(1, currentDuration)) * 100));
 
   return (
@@ -129,7 +147,7 @@ export default function AICallsPage() {
             <BrainCircuit className="w-6 h-6 text-indigo-600" /> Speech-to-Text & AI Call Quality Intelligence
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Turn-by-turn speaker diarization, sentiment analysis, agent 5-criteria quality score cards & smart follow-up suggestions
+            Turn-by-turn speaker diarization, real audible voice replay, sentiment analysis & 5-criteria quality score cards
           </p>
         </div>
       </div>
@@ -142,7 +160,16 @@ export default function AICallsPage() {
             {calls.map((c) => (
               <div
                 key={c.id}
-                onClick={() => { setSelectedCall(c); setPlaybackSecs(0); setIsPlaying(false); }}
+                onClick={() => {
+                  setSelectedCall(c);
+                  setPlaybackSecs(0);
+                  setCurrentLineIndex(-1);
+                  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                  }
+                  setIsPlaying(false);
+                  isPlayingRef.current = false;
+                }}
                 className={`p-3.5 rounded-xl border cursor-pointer transition space-y-1.5 ${
                   selectedCall?.id === c.id ? "bg-indigo-50 border-indigo-400 shadow-sm" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                 }`}
@@ -180,30 +207,25 @@ export default function AICallsPage() {
                 </div>
               </div>
 
-              {/* Interactive Audio Player */}
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+              {/* Audible Voice Audio Player */}
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
                 <button
                   onClick={togglePlayback}
-                  className="p-2.5 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
-                  title={isPlaying ? "Pause Recording" : "Play Recording"}
+                  className="p-3 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition shadow-lg flex items-center justify-center"
+                  title={isPlaying ? "Pause Recording" : "Play Audible Voice Recording"}
                 >
-                  {isPlaying ? <Pause className="w-4 h-4 fill-slate-950" /> : <Play className="w-4 h-4 fill-slate-950" />}
+                  {isPlaying ? <Pause className="w-5 h-5 fill-slate-950" /> : <Play className="w-5 h-5 fill-slate-950 ml-0.5" />}
                 </button>
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between text-[11px] text-slate-400 font-mono">
-                    <span>{formatTime(playbackSecs)}</span>
+                    <span className="text-emerald-400 font-bold">{isPlaying ? "🔊 Voice Replay Playing..." : formatTime(playbackSecs)}</span>
                     <span>{formatTime(currentDuration)}</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 cursor-pointer" onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const pct = clickX / rect.width;
-                    setPlaybackSecs(Math.round(pct * currentDuration));
-                  }}>
-                    <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
+                  <div className="w-full bg-slate-800 rounded-full h-2">
+                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-300 shadow-sm" style={{ width: `${progressPercent}%` }}></div>
                   </div>
                 </div>
-                <Volume2 className="w-4 h-4 text-slate-400" />
+                <Volume2 className={`w-5 h-5 ${isPlaying ? "text-emerald-400 animate-pulse" : "text-slate-400"}`} />
               </div>
             </div>
 
@@ -259,22 +281,32 @@ export default function AICallsPage() {
               </h3>
 
               <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                {(ai.transcript || []).map((line: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-xl text-xs space-y-1 ${
-                      line.speaker.includes("Agent") || line.speaker.includes("Priya")
-                        ? "bg-blue-50/80 border border-blue-200 ml-4"
-                        : "bg-slate-100 border border-slate-200 mr-4"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-slate-900">{line.speaker}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{line.time}</span>
+                {transcript.map((line: any, idx: number) => {
+                  const isActive = currentLineIndex === idx;
+                  const isAgent = line.speaker.includes("Agent") || line.speaker.includes("Priya");
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => playTranscriptAudibly(idx)}
+                      className={`p-3.5 rounded-xl text-xs space-y-1 transition cursor-pointer ${
+                        isActive
+                          ? "ring-2 ring-emerald-500 bg-emerald-50 border border-emerald-300 scale-[1.01]"
+                          : isAgent
+                          ? "bg-blue-50/80 border border-blue-200 ml-4 hover:bg-blue-100"
+                          : "bg-slate-100 border border-slate-200 mr-4 hover:bg-slate-200"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                          {isAgent ? "🎧" : "👤"} {line.speaker}
+                          {isActive && <span className="text-[10px] bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded">Speaking</span>}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">{line.time}</span>
+                      </div>
+                      <p className="text-slate-800 leading-relaxed">{line.text}</p>
                     </div>
-                    <p className="text-slate-700 leading-relaxed">{line.text}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

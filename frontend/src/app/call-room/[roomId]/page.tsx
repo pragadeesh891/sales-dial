@@ -41,6 +41,7 @@ export default function ClientCallRoomPage({ params }: { params: Promise<{ roomI
           if (remoteAudioRef.current && event.streams[0]) {
             remoteAudioRef.current.srcObject = event.streams[0];
             remoteStreamRef.current = event.streams[0];
+            remoteAudioRef.current.play().catch(() => undefined);
           }
         };
 
@@ -170,8 +171,8 @@ export default function ClientCallRoomPage({ params }: { params: Promise<{ roomI
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-6">
-      <audio ref={localAudioRef} autoPlay muted />
-      <audio ref={remoteAudioRef} autoPlay />
+      <audio ref={localAudioRef} autoPlay muted playsInline />
+      <audio ref={remoteAudioRef} autoPlay playsInline />
 
       {/* Header */}
       <div className="max-w-2xl mx-auto w-full flex justify-between items-center bg-slate-900/80 p-4 rounded-2xl border border-slate-800 backdrop-blur-md">
