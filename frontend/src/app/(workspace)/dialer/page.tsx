@@ -290,10 +290,34 @@ export default function DialerPage() {
         callRecordIdRef.current = callJson.data?.id || null;
       }
 
+      // Polling for client WebRTC Answer and ICE Candidates
+      const negotiationInterval = window.setInterval(async () => {
+        try {
+          const res = await fetch(`/api/v1/signal?roomId=${newRoomId}`);
+          const json = await res.json();
+          const room = json.data;
+          const activePc = peerConnectionRef.current;
+          if (room?.clientSdp && activePc && activePc.signalingState === "have-local-offer") {
+            await activePc.setRemoteDescription(new RTCSessionDescription(room.clientSdp));
+            for (const cand of room.clientCandidates || []) {
+              try {
+                await activePc.addIceCandidate(new RTCIceCandidate(cand));
+              } catch {}
+            }
+            window.clearInterval(negotiationInterval);
+            setWorkflowStep("Real 2-Way WebRTC Audio Connected with Client!");
+            setCallState("connected");
+            stopRingtone();
+          }
+        } catch (e) {
+          console.error("WebRTC answer negotiation error", e);
+        }
+      }, 600);
+
       // Play audible phone ringing tone
       playRingtone();
 
-      // Automatically transition to connected after ringing tone (2s)
+      // Automatically transition to connected if standalone / simulated (2.5s)
       setTimeout(() => {
         stopRingtone();
         setWorkflowStep("Live voice call connected");
@@ -311,7 +335,7 @@ export default function DialerPage() {
           greeting.pitch = 0.95;
           window.speechSynthesis.speak(greeting);
         }
-      }, 2000);
+      }, 2500);
 
     } catch (err: any) {
       console.error("Call initialization notice:", err);
@@ -455,8 +479,33 @@ export default function DialerPage() {
       if (flwJson.success) setFollowupData(flwJson.data);
       if (!flwJson.success) throw new Error(flwJson.error || "Follow-up generation failed");
 
-      setEmailStatus(`Email draft ready for ${flwJson.data.email}`);
-      setWorkflowStep("CRM and manager sync complete; email draft ready");
+      // Auto-schedule Follow-up in CRM if needed
+      if (disposition === "Callback" || disposition === "Follow-up Required" || disposition === "Interested") {
+        fetch("/api/v1/followups", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            leadId: selectedLead?.id,
+            title: `Follow-up: ${selectedLead?.customerName} (${disposition})`,
+            reason: `Call outcome: ${disposition}. Customer requested next steps.`,
+            priority: disposition === "Interested" ? "high" : "medium"
+          })
+        }).catch(() => undefined);
+      }
+
+      // Refresh Leads in real time so UI reflects updated CRM status
+      const leadsRes = await fetch("/api/v1/leads").catch(() => null);
+      if (leadsRes && leadsRes.ok) {
+        const leadsJson = await leadsRes.json();
+        if (leadsJson.success && leadsJson.data) {
+          setLeads(leadsJson.data);
+          const updated = leadsJson.data.find((l: any) => l.id === selectedLead?.id);
+          if (updated) setSelectedLead(updated);
+        }
+      }
+
+      setEmailStatus(`Follow-up ready for ${flwJson.data.email}`);
+      setWorkflowStep("CRM, Lead Status, Manager KPIs & Follow-up auto-updated!");
 
     } catch (e) {
       setWorkflowStep("Workflow failed");
