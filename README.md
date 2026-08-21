@@ -1,57 +1,63 @@
 # Logashree Sales Dial & Call Center Platform
 
-Modern, AI-powered Sales Dial & Call Center Management Platform with Next.js 16 (React 19) frontend and high-performance Go microservice backend.
+Modern, AI-powered Sales Dial & Call Center Management Platform built with Next.js 16 (React 19) and high-performance Go microservice backend.
 
 ---
 
-## ?? How to Run
-
-You have two ways to run the project depending on your requirements:
+## ? Quick Start: 3 Ways to Run
 
 ---
 
-### Option 1: Frontend App (Quickest — Zero Setup)
-Runs the complete web application with built-in CRM database, live call dialer, AI tools, manager dashboard, and audio recordings.
+### Option 1: ?? 1-Command Docker Run (Frontend + Backend + Database)
+Runs **everything** (Next.js Frontend, Go API Backend, PostgreSQL, Redis, RabbitMQ, and MinIO) in isolated Docker containers:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend App**: ?? [http://localhost:3000](http://localhost:3000)
+- **Go API Backend**: ?? [http://localhost:8080](http://localhost:8080)
+- **MinIO Storage Console**: ?? [http://localhost:9001](http://localhost:9001)
+
+---
+
+### Option 2: ? Frontend Standalone (Zero Configuration Needed)
+Runs the Next.js web application with the built-in CRM database, live dialer, AI tools, and audio playback:
 
 ```bash
 # 1. Install dependencies
 npm run install:all
 
-# 2. Start the application
+# 2. Start the dev server
 npm run dev
 ```
 
-Open your browser at:
-?? **[http://localhost:3000](http://localhost:3000)**
+- Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-### Option 2: Full-Stack Mode (Go Backend + Docker + Next.js)
-Runs the native Go API backend alongside PostgreSQL, Redis, RabbitMQ, and MinIO storage.
+### Option 3: ??? Native Full-Stack (Go + Docker Services + Next.js)
 
-#### Step 1: Start Backend Services (Docker)
+#### 1. Start Support Infrastructure:
 ```bash
 npm run infra:up
 ```
-*(Starts Postgres at `:5432`, Redis at `:6379`, RabbitMQ at `:5672`/`:15672`, MinIO at `:9000`/`:9001`)*
 
-#### Step 2: Setup Backend Environment
+#### 2. Copy Environment Config:
 ```bash
 # Windows PowerShell:
 Copy-Item backend/.env.example backend/.env
 
-# Linux / macOS / Git Bash:
+# Linux / macOS:
 cp backend/.env.example backend/.env
 ```
 
-#### Step 3: Start Go API Backend & Worker
+#### 3. Start Go Backend:
 ```bash
 npm run dev:backend
 ```
-*(The Go backend automatically connects to Postgres, runs all 9 SQL migrations, connects to Redis/RabbitMQ/MinIO, and starts listening on `http://localhost:8080`)*
 
-#### Step 4: Start Frontend
-In a new terminal:
+#### 4. Start Next.js Frontend (in a new terminal):
 ```bash
 npm run dev:frontend
 ```
@@ -60,7 +66,7 @@ npm run dev:frontend
 
 ## ?? Login Credentials
 
-The platform includes pre-configured accounts:
+The platform includes pre-configured demo and admin accounts:
 
 | Role | Email | Password | Access Area |
 | :--- | :--- | :--- | :--- |
@@ -71,24 +77,25 @@ The platform includes pre-configured accounts:
 
 ## ?? Application Modules & Routes
 
-- **Outbound Dialer**: [`/dialer`](http://localhost:3000/dialer) - Keypad, quick customer calling, call status.
-- **Call Room**: [`/call-room`](http://localhost:3000/call-room) - Live active call screen with live notes & script.
-- **Leads CRM**: [`/leads`](http://localhost:3000/leads) - Lead pipeline, contact cards, lead assignment.
-- **AI Intelligence Center**: [`/ai-center`](http://localhost:3000/ai-center) - Objection handler & call summary engine.
-- **Follow-up Generator**: [`/followup-generator`](http://localhost:3000/followup-generator) - AI-generated email drafts.
-- **Manager Hub**: [`/manager`](http://localhost:3000/manager) - Real-time metrics, conversion analytics, agent performance.
-- **Manager AI Chat**: [`/manager-ai-chat`](http://localhost:3000/manager-ai-chat) - Conversational AI queries for manager insights.
-- **Supervisor Floor**: [`/supervisor`](http://localhost:3000/supervisor) - Live agent monitoring with Whisper & Barge.
-- **Calls History**: [`/calls`](http://localhost:3000/calls) - Call audio playback, dispositions & notes.
-- **Leaderboard**: [`/leaderboard`](http://localhost:3000/leaderboard) - Rep rankings and achievement tracking.
-- **Reports**: [`/reports`](http://localhost:3000/reports) - Daily and weekly call conversion summaries.
-- **Settings**: [`/settings`](http://localhost:3000/settings) - Profile and system configurations.
+| Module | URL | Description |
+| :--- | :--- | :--- |
+| **Dialer** | [`/dialer`](http://localhost:3000/dialer) | Outbound dialing keypad & active customer queue |
+| **Call Room** | [`/call-room`](http://localhost:3000/call-room) | Active call workspace with real-time scripts & dispositions |
+| **Leads CRM** | [`/leads`](http://localhost:3000/leads) | Lead pipeline, status filters, and contact assignments |
+| **AI Center** | [`/ai-center`](http://localhost:3000/ai-center) | Automated objection handling & AI call summaries |
+| **Follow-up Generator** | [`/followup-generator`](http://localhost:3000/followup-generator) | AI email & message draft engine |
+| **Manager Hub** | [`/manager`](http://localhost:3000/manager) | Sales team overview, KPI tracking & metrics |
+| **Manager AI Chat** | [`/manager-ai-chat`](http://localhost:3000/manager-ai-chat) | AI assistant for team performance queries |
+| **Supervisor Floor** | [`/supervisor`](http://localhost:3000/supervisor) | Live queue monitor, agent status, whisper/barge |
+| **Calls History** | [`/calls`](http://localhost:3000/calls) | Call audio playback, duration tracking & dispositions |
+| **Leaderboard** | [`/leaderboard`](http://localhost:3000/leaderboard) | Agent sales rankings & achievement badges |
+| **Reports** | [`/reports`](http://localhost:3000/reports) | Daily analytics, conversion rates & export options |
+| **Settings** | [`/settings`](http://localhost:3000/settings) | Account, system preferences & integrations |
 
 ---
 
-## ?? Sharing Access with Teammates (LAN / Network)
+## ?? Network Sharing (Access from another phone/laptop)
 
-To let teammates or friends on the same Wi-Fi access your running app:
-1. Find your IP address (`192.168.0.4` or run `ipconfig`).
-2. Have your friend open: `http://192.168.0.4:3000`
+1. Find your machine IP address (`192.168.0.4` or run `ipconfig`).
+2. Have your teammate open: `http://192.168.0.4:3000`
 

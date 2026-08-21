@@ -7,6 +7,8 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "cd backend && go run ./cmd/api",
     "dev:worker": "cd backend && go run ./cmd/worker",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
     "infra:up": "docker compose -f backend/infra/docker-compose.dev.yml up -d",
     "infra:down": "docker compose -f backend/infra/docker-compose.dev.yml down",
     "build": "npm --prefix frontend run build",
