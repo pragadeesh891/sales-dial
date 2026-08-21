@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   BrainCircuit,
   PhoneCall,
   Play,
+  Pause,
   User,
   Sparkles,
   Award,
@@ -18,6 +19,10 @@ import {
 export default function AICallsPage() {
   const [calls, setCalls] = useState<any[]>([]);
   const [selectedCall, setSelectedCall] = useState<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSecs, setPlaybackSecs] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
 
   useEffect(() => {
     async function loadCalls() {
@@ -35,9 +40,58 @@ export default function AICallsPage() {
     loadCalls();
   }, []);
 
+  // Audio Playback Simulation Timer & Sound Synthesizer
+  useEffect(() => {
+    let interval: any;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setPlaybackSecs((prev) => {
+          const maxDur = selectedCall?.durationSeconds || 392;
+          if (prev >= maxDur) {
+            setIsPlaying(false);
+            return 0;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, selectedCall]);
+
+  const togglePlayback = () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      try {
+        oscillatorRef.current?.stop();
+        audioContextRef.current?.close();
+      } catch {}
+    } else {
+      setIsPlaying(true);
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(300, ctx.currentTime);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        oscillatorRef.current = osc;
+      } catch {}
+    }
+  };
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   const ai = selectedCall?.aiAnalysis || {
     transcript: [
-      { speaker: "Priya Sharma (Agent)", text: "Hello Ravi, this is Priya from Callyzer AI. I am following up on your demo request.", time: "00:02" },
+      { speaker: "Priya Sharma (Agent)", text: "Hello Ravi, this is Priya from Sales Dial AI. I am following up on your demo request.", time: "00:02" },
       { speaker: "Ravi Kumar (Customer)", text: "Hi Priya! Yes, we make about 300 cold calls daily and struggle to monitor call quality and agent performance.", time: "00:14" },
       { speaker: "Priya Sharma (Agent)", text: "That is exactly what our AI Call Intelligence solves! We automatically transcribe calls, score agent opening and closing pitch, and detect customer objections.", time: "00:35" },
       { speaker: "Ravi Kumar (Customer)", text: "That sounds great! What is the pricing per seat? Is there a minimum commitment?", time: "01:20" },
@@ -50,18 +104,21 @@ export default function AICallsPage() {
     objections: ["Wants pricing clarification before final purchase"],
     keyTopics: ["Cold Calling Volume", "AI Quality Scoring", "Pricing Tiers", "Follow-up Demo"],
     recommendedAction: "Send customized enterprise proposal and conduct follow-up call tomorrow at 10:00 AM.",
-    agentScore: 91,
+    agentScore: 94,
     scoreBreakdown: {
-      opening: 18,
+      opening: 19,
       explanation: 19,
-      engagement: 18,
+      engagement: 19,
       objectionHandling: 18,
-      closing: 18
+      closing: 19
     },
     strengths: ["Strong value proposition explanation", "Active listening and problem alignment"],
     weaknesses: ["Could have quantified ROI metrics earlier in the call"],
-    conversionProbability: 85
+    conversionProbability: 88
   };
+
+  const currentDuration = selectedCall?.durationSeconds || 392;
+  const progressPercent = Math.min(100, Math.round((playbackSecs / Math.max(1, currentDuration)) * 100));
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -85,7 +142,7 @@ export default function AICallsPage() {
             {calls.map((c) => (
               <div
                 key={c.id}
-                onClick={() => setSelectedCall(c)}
+                onClick={() => { setSelectedCall(c); setPlaybackSecs(0); setIsPlaying(false); }}
                 className={`p-3.5 rounded-xl border cursor-pointer transition space-y-1.5 ${
                   selectedCall?.id === c.id ? "bg-indigo-50 border-indigo-400 shadow-sm" : "bg-slate-50 border-slate-200 hover:bg-slate-100"
                 }`}
@@ -93,13 +150,13 @@ export default function AICallsPage() {
                 <div className="flex justify-between items-start">
                   <p className="font-bold text-slate-900 text-sm">{c.customerName}</p>
                   <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                    Score {c.aiAnalysis?.agentScore || 91}/100
+                    Score {c.aiAnalysis?.agentScore || 92}/100
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 font-mono">{c.agentName} • {Math.floor((c.durationSeconds || 392) / 60)}m {(c.durationSeconds || 392) % 60}s</p>
+                <p className="text-xs text-slate-500 font-mono">{c.agentName} • {Math.floor((c.durationSeconds || 240) / 60)}m {(c.durationSeconds || 240) % 60}s</p>
                 <div className="flex justify-between items-center text-[11px]">
                   <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">{c.disposition || "Interested"}</span>
-                  <span className="text-emerald-600 font-bold capitalize">Positive 🟢</span>
+                  <span className="text-emerald-600 font-bold capitalize">Positive</span>
                 </div>
               </div>
             ))}
@@ -115,26 +172,35 @@ export default function AICallsPage() {
                 <div>
                   <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">AI Call Recording Analysis</span>
                   <h2 className="text-xl font-extrabold text-white mt-0.5">{selectedCall.customerName}</h2>
-                  <p className="text-xs text-slate-400 font-mono">Agent: {selectedCall.agentName} • Duration: 06:32 • Outcome: {selectedCall.disposition || "Interested"}</p>
+                  <p className="text-xs text-slate-400 font-mono">Agent: {selectedCall.agentName} • Duration: {formatTime(currentDuration)} • Outcome: {selectedCall.disposition || "Interested"}</p>
                 </div>
                 <div className="bg-indigo-600/30 border border-indigo-500/40 p-3 rounded-xl text-center">
                   <span className="text-xs text-indigo-300 block font-semibold">AI Quality Score</span>
-                  <span className="text-2xl font-black text-white">{ai.agentScore} / 100</span>
+                  <span className="text-2xl font-black text-white">{ai.agentScore || 94} / 100</span>
                 </div>
               </div>
 
-              {/* Simulated Audio Player */}
+              {/* Interactive Audio Player */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-                <button className="p-2.5 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition">
-                  <Play className="w-4 h-4 fill-slate-950" />
+                <button
+                  onClick={togglePlayback}
+                  className="p-2.5 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                  title={isPlaying ? "Pause Recording" : "Play Recording"}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4 fill-slate-950" /> : <Play className="w-4 h-4 fill-slate-950" />}
                 </button>
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between text-[11px] text-slate-400 font-mono">
-                    <span>01:45</span>
-                    <span>06:32</span>
+                    <span>{formatTime(playbackSecs)}</span>
+                    <span>{formatTime(currentDuration)}</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5">
-                    <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: "35%" }}></div>
+                  <div className="w-full bg-slate-800 rounded-full h-1.5 cursor-pointer" onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const pct = clickX / rect.width;
+                    setPlaybackSecs(Math.round(pct * currentDuration));
+                  }}>
+                    <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
                   </div>
                 </div>
                 <Volume2 className="w-4 h-4 text-slate-400" />
@@ -150,37 +216,37 @@ export default function AICallsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 block">Opening Hook</span>
-                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown.opening}/20</span>
+                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown?.opening || 19}/20</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 block">Product Pitch</span>
-                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown.explanation}/20</span>
+                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown?.explanation || 19}/20</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 block">Engagement</span>
-                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown.engagement}/20</span>
+                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown?.engagement || 19}/20</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 block">Objections</span>
-                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown.objectionHandling}/20</span>
+                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown?.objectionHandling || 18}/20</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-500 block">Closing Push</span>
-                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown.closing}/20</span>
+                  <span className="text-base font-extrabold text-slate-900">{ai.scoreBreakdown?.closing || 19}/20</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
                 <div className="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200">
-                  <span className="font-bold text-emerald-900 block mb-1">💪 Key Strengths:</span>
+                  <span className="font-bold text-emerald-900 block mb-1">Key Strengths:</span>
                   <ul className="list-disc list-inside text-emerald-800 space-y-1">
-                    {ai.strengths.map((s: string, idx: number) => <li key={idx}>{s}</li>)}
+                    {(ai.strengths || ["Strong value proposition", "Excellent objection handling"]).map((s: string, idx: number) => <li key={idx}>{s}</li>)}
                   </ul>
                 </div>
                 <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-200">
-                  <span className="font-bold text-amber-900 block mb-1">⚠️ Area for Improvement:</span>
+                  <span className="font-bold text-amber-900 block mb-1">Area for Improvement:</span>
                   <ul className="list-disc list-inside text-amber-800 space-y-1">
-                    {ai.weaknesses.map((w: string, idx: number) => <li key={idx}>{w}</li>)}
+                    {(ai.weaknesses || ["Could lock in exact follow-up hour"]).map((w: string, idx: number) => <li key={idx}>{w}</li>)}
                   </ul>
                 </div>
               </div>
@@ -193,11 +259,11 @@ export default function AICallsPage() {
               </h3>
 
               <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                {ai.transcript.map((line: any, idx: number) => (
+                {(ai.transcript || []).map((line: any, idx: number) => (
                   <div
                     key={idx}
                     className={`p-3 rounded-xl text-xs space-y-1 ${
-                      line.speaker.includes("Agent")
+                      line.speaker.includes("Agent") || line.speaker.includes("Priya")
                         ? "bg-blue-50/80 border border-blue-200 ml-4"
                         : "bg-slate-100 border border-slate-200 mr-4"
                     }`}

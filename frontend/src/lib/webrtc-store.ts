@@ -113,4 +113,9 @@ class WebRTCStore {
   }
 }
 
-export const webrtcStore = new WebRTCStore();
+declare global {
+  // eslint-disable-next-line no-var
+  var __salesDialWebRTCStore: WebRTCStore | undefined;
+}
+
+export const webrtcStore = globalThis.__salesDialWebRTCStore || (globalThis.__salesDialWebRTCStore = new WebRTCStore());
